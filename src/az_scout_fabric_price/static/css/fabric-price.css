@@ -205,3 +205,119 @@
     font-weight: 700;
     color: var(--bs-body-color);
 }
+
+/* Clickable SKU cells */
+.fp-td-sku[data-action] {
+    cursor: pointer;
+    color: var(--bs-primary);
+}
+
+.fp-td-sku[data-action]:hover {
+    text-decoration: underline;
+}
+
+.fp-history-icon {
+    font-size: 0.65rem;
+    opacity: 0.4;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+}
+
+.fp-td-sku[data-action]:hover .fp-history-icon {
+    opacity: 0.8;
+}
+
+/* History modal controls */
+.fp-history-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* D3 chart */
+#fp-chart-container {
+    position: relative;
+}
+
+.fp-chart-svg {
+    width: 100%;
+    height: auto;
+    max-height: 420px;
+}
+
+.fp-chart-grid line {
+    stroke: var(--bs-border-color);
+    stroke-opacity: 0.3;
+}
+
+.fp-chart-grid .domain {
+    display: none;
+}
+
+.fp-chart-axis text {
+    fill: var(--bs-secondary-color);
+    font-size: 0.75rem;
+}
+
+.fp-chart-axis line,
+.fp-chart-axis .domain {
+    stroke: var(--bs-border-color);
+}
+
+.fp-chart-legend-text {
+    fill: var(--bs-body-color);
+    font-size: 0.75rem;
+}
+
+.fp-chart-focus-line {
+    stroke: var(--bs-secondary-color);
+    stroke-width: 1;
+    stroke-dasharray: 3,3;
+}
+
+.fp-chart-nodata {
+    text-align: center;
+    padding: 2rem;
+    color: var(--bs-secondary-color);
+}
+
+/* Chart tooltip */
+.fp-chart-tooltip {
+    position: absolute;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.fp-tip-date {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--bs-secondary-color);
+    font-size: 0.75rem;
+}
+
+.fp-tip-line {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1px 0;
+}
+
+.fp-tip-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+/* Dark mode */
+[data-theme="dark"] .fp-chart-tooltip {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}

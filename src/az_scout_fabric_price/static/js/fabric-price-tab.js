@@ -81,6 +81,27 @@
 
         loadBtn.addEventListener("click", loadPrices);
 
+        // History modal
+        let historyModal = null;
+        let activeSku = "";
+        const historySkuEl   = document.getElementById("fp-history-sku");
+        const bucketSelect   = document.getElementById("fp-bucket-select");
+        const historyLoading = document.getElementById("fp-history-loading");
+        const historyError   = document.getElementById("fp-history-error");
+        const chartContainer = document.getElementById("fp-chart-container");
+
+        tableWrapper.addEventListener("click", (e) => {
+            const cell = e.target.closest("[data-action='history']");
+            if (cell) openHistoryModal(cell.dataset.sku);
+        });
+
+        bucketSelect.addEventListener("change", () => {
+            if (activeSku) fetchHistory(activeSku, bucketSelect.value);
+        });
+
+        document.getElementById("fp-history-modal")
+            .addEventListener("hidden.bs.modal", () => { chartContainer.innerHTML = ""; });
+
         // Initial state
         updateRegionBadge();
         if (getRegion()) loadPrices();
@@ -161,7 +182,7 @@
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = [
-                    `<td class="fp-td-sku">${esc(name)}</td>`,
+                    `<td class="fp-td-sku" data-action="history" data-sku="${escAttr(name)}" role="button" title="View price history">${esc(name)} <i class="bi bi-graph-up fp-history-icon"></i></td>`,
                     `<td class="fp-td-cu">${cu}</td>`,
                     `<td class="fp-td-price">${fmtPrice(fmt, payg)}</td>`,
                     `<td class="fp-td-price">${fmtPrice(fmt, paygMonth)}</td>`,
@@ -226,6 +247,219 @@
             const el = document.createElement("span");
             el.textContent = str;
             return el.innerHTML;
+        }
+
+        function escAttr(str) {
+            return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+                      .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // --- History modal & D3 chart ---
+
+        function openHistoryModal(sku) {
+            activeSku = sku;
+            historySkuEl.textContent = sku;
+            if (!historyModal) {
+                historyModal = new bootstrap.Modal(
+                    document.getElementById("fp-history-modal")
+                );
+            }
+            historyModal.show();
+            fetchHistory(sku, bucketSelect.value);
+        }
+
+        async function fetchHistory(sku, bucket) {
+            historyLoading.style.display = "";
+            historyError.style.display = "none";
+            chartContainer.innerHTML = "";
+
+            const region   = getRegion();
+            const currency = currencySelect.value;
+            const models   = ["PAYG", "RI_1Y", "RI_3Y"];
+
+            try {
+                const results = await Promise.all(models.map(model =>
+                    apiFetch(
+                        `/plugins/${PLUGIN}/v1/fabric/prices/series?` +
+                        `region=${encodeURIComponent(region)}` +
+                        `&sku=${encodeURIComponent(sku)}` +
+                        `&model=${encodeURIComponent(model)}` +
+                        `&currency=${encodeURIComponent(currency)}` +
+                        `&bucket=${encodeURIComponent(bucket)}`
+                    )
+                ));
+
+                const datasets = {};
+                models.forEach((model, i) => {
+                    const res = results[i];
+                    if (res.error) { datasets[model] = []; return; }
+                    datasets[model] = (res.items || []).map(p => ({
+                        date: new Date(p.bucketTs),
+                        value: p.value,
+                    }));
+                });
+
+                historyLoading.style.display = "none";
+                renderChart(datasets, currency);
+            } catch (err) {
+                historyLoading.style.display = "none";
+                historyError.textContent = err.message || "Failed to fetch price history";
+                historyError.style.display = "";
+            }
+        }
+
+        function renderChart(datasets, currency) {
+            chartContainer.innerHTML = "";
+
+            const MODELS = [
+                { key: "PAYG",  label: "Pay-As-You-Go", color: "#0d6efd" },
+                { key: "RI_1Y", label: "1-Year RI",     color: "#198754" },
+                { key: "RI_3Y", label: "3-Year RI",     color: "#fd7e14" },
+            ];
+            const active = MODELS.filter(m =>
+                datasets[m.key] && datasets[m.key].length > 0
+            );
+            if (active.length === 0) {
+                chartContainer.innerHTML =
+                    '<div class="fp-chart-nodata">No price history available.</div>';
+                return;
+            }
+
+            for (const m of active) {
+                datasets[m.key].sort((a, b) => a.date - b.date);
+            }
+
+            const allPts = active.flatMap(m => datasets[m.key]);
+            const margin = { top: 32, right: 20, bottom: 36, left: 64 };
+            const W = 800, H = 360;
+            const iW = W - margin.left - margin.right;
+            const iH = H - margin.top - margin.bottom;
+
+            const svg = d3.select(chartContainer).append("svg")
+                .attr("viewBox", `0 0 ${W} ${H}`)
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .classed("fp-chart-svg", true);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Scales
+            const xScale = d3.scaleTime()
+                .domain(d3.extent(allPts, d => d.date))
+                .range([0, iW]);
+
+            const [yMin, yMax] = d3.extent(allPts, d => d.value);
+            const yPad = (yMax - yMin) * 0.1 || yMin * 0.1 || 0.01;
+            const yScale = d3.scaleLinear()
+                .domain([Math.max(0, yMin - yPad), yMax + yPad])
+                .range([iH, 0]);
+
+            // Grid
+            g.append("g").attr("class", "fp-chart-grid")
+                .call(d3.axisLeft(yScale).ticks(6).tickSize(-iW).tickFormat(""));
+
+            // Axes
+            g.append("g").attr("class", "fp-chart-axis")
+                .attr("transform", `translate(0,${iH})`)
+                .call(d3.axisBottom(xScale).ticks(7));
+
+            const fmt = priceFormatter(currency, 4);
+            g.append("g").attr("class", "fp-chart-axis")
+                .call(d3.axisLeft(yScale).ticks(6)
+                    .tickFormat(v => fmt.format(v)));
+
+            // Lines
+            const lineFn = d3.line()
+                .x(d => xScale(d.date))
+                .y(d => yScale(d.value))
+                .curve(d3.curveMonotoneX);
+
+            for (const m of active) {
+                g.append("path")
+                    .datum(datasets[m.key])
+                    .attr("fill", "none")
+                    .attr("stroke", m.color)
+                    .attr("stroke-width", 2)
+                    .attr("d", lineFn);
+            }
+
+            // Legend
+            const legend = svg.append("g")
+                .attr("transform",
+                    `translate(${margin.left + 8},${margin.top - 14})`);
+            active.forEach((m, i) => {
+                const lg = legend.append("g")
+                    .attr("transform", `translate(${i * 140},0)`);
+                lg.append("line")
+                    .attr("x1", 0).attr("x2", 18)
+                    .attr("stroke", m.color).attr("stroke-width", 2);
+                lg.append("text").attr("x", 22).attr("y", 4)
+                    .attr("class", "fp-chart-legend-text").text(m.label);
+            });
+
+            // Tooltip
+            const tip = d3.select(chartContainer).append("div")
+                .attr("class", "fp-chart-tooltip")
+                .style("display", "none");
+
+            const focusLine = g.append("line")
+                .attr("class", "fp-chart-focus-line")
+                .attr("y1", 0).attr("y2", iH)
+                .style("display", "none");
+
+            const dots = active.map(m =>
+                g.append("circle").attr("r", 4)
+                    .attr("fill", m.color)
+                    .attr("stroke", "#fff").attr("stroke-width", 1.5)
+                    .style("display", "none")
+            );
+
+            const bisect = d3.bisector(d => d.date).left;
+
+            svg.append("rect")
+                .attr("x", margin.left).attr("y", margin.top)
+                .attr("width", iW).attr("height", iH)
+                .attr("fill", "none").attr("pointer-events", "all")
+                .on("mousemove", function (event) {
+                    const [mx] = d3.pointer(event, g.node());
+                    const xDate = xScale.invert(mx);
+                    focusLine.attr("x1", mx).attr("x2", mx)
+                        .style("display", null);
+
+                    let html = '<div class="fp-tip-date">' +
+                        d3.timeFormat("%b %d, %Y")(xDate) + '</div>';
+                    active.forEach((m, i) => {
+                        const data = datasets[m.key];
+                        const idx = bisect(data, xDate, 1);
+                        const d0 = data[idx - 1];
+                        const d1 = data[idx];
+                        if (!d0) return;
+                        const d = (!d1 || xDate - d0.date < d1.date - xDate)
+                            ? d0 : d1;
+                        dots[i]
+                            .attr("cx", xScale(d.date))
+                            .attr("cy", yScale(d.value))
+                            .style("display", null);
+                        html += '<div class="fp-tip-line">' +
+                            '<span class="fp-tip-swatch" style="background:' +
+                            m.color + '"></span>' +
+                            m.label + ': <strong>' +
+                            fmt.format(d.value) + '</strong></div>';
+                    });
+
+                    tip.html(html).style("display", "block");
+                    const cRect = chartContainer.getBoundingClientRect();
+                    const evX = event.clientX - cRect.left;
+                    const tipW = tip.node().offsetWidth;
+                    const left = (evX + tipW + 20 > cRect.width)
+                        ? evX - tipW - 10 : evX + 10;
+                    tip.style("left", left + "px").style("top", "40px");
+                })
+                .on("mouseleave", function () {
+                    focusLine.style("display", "none");
+                    dots.forEach(d => d.style("display", "none"));
+                    tip.style("display", "none");
+                });
         }
 
         // --- UI toggles ---
