@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from az_scout_fabric_price.bdd_client import fetch_latest_prices, fetch_prices
@@ -115,6 +115,11 @@ def get_price_series(
     Each bucket contains the last-observed price within that time window.
     """
     cu_count = SKU_CU_MAP[sku]  # caller must validate sku beforehand
+
+    if not from_dt:
+        _LOOKBACK = {"day": 90, "week": 180, "month": 365}
+        days = _LOOKBACK.get(bucket, 90)
+        from_dt = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00")
 
     raw = fetch_prices(region, currency, updated_since=from_dt)
 
