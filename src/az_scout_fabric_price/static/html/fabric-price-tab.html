@@ -1,0 +1,89 @@
+<!-- Fabric Pricing tab – HTML fragment loaded by fabric-price-tab.js -->
+<div class="fp-container">
+    <h6><i class="bi bi-microsoft"></i> Microsoft Fabric Capacity Pricing</h6>
+    <p class="text-body-secondary small mb-3">
+        Compare Fabric capacity SKU pricing across models (Pay-As-You-Go, 1-Year RI, 3-Year RI).
+    </p>
+
+    <!-- Not-configured banner -->
+    <div class="fp-not-configured" id="fp-not-configured" style="display:none">
+        <i class="bi bi-info-circle"></i>
+        The BDD SKU API is not configured. Set the API endpoint in the
+        <strong>BDD SKU</strong> plugin settings tab to view Fabric pricing.
+    </div>
+
+    <!-- Controls row -->
+    <div class="fp-controls" id="fp-controls">
+        <div class="fp-control-group">
+            <span class="form-label form-label-sm">Region</span>
+            <span class="badge bg-secondary" id="fp-region-badge">No region</span>
+        </div>
+        <div class="fp-control-group">
+            <label for="fp-currency-select" class="form-label form-label-sm">Currency</label>
+            <select class="form-select form-select-sm" id="fp-currency-select">
+                <option value="USD" selected>USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="JPY">JPY</option>
+                <option value="AUD">AUD</option>
+                <option value="CAD">CAD</option>
+                <option value="CHF">CHF</option>
+                <option value="BRL">BRL</option>
+                <option value="INR">INR</option>
+                <option value="KRW">KRW</option>
+            </select>
+        </div>
+        <div class="fp-control-group fp-control-actions">
+            <button class="btn btn-primary btn-sm" id="fp-load-btn" disabled>
+                <i class="bi bi-arrow-clockwise"></i> Load Prices
+            </button>
+        </div>
+    </div>
+
+    <!-- Warnings -->
+    <div class="fp-warnings" id="fp-warnings" style="display:none"></div>
+
+    <!-- Source metadata -->
+    <div class="fp-source-info" id="fp-source-info" style="display:none">
+        <span class="fp-source-label">Data retrieved:</span>
+        <span id="fp-retrieved-at">—</span>
+    </div>
+
+    <!-- Loading spinner -->
+    <div class="fp-loading" id="fp-loading" style="display:none">
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+        <span>Fetching pricing data…</span>
+    </div>
+
+    <!-- Error display -->
+    <div class="fp-error" id="fp-error" style="display:none"></div>
+
+    <!-- Pricing table -->
+    <div class="fp-table-wrapper" id="fp-table-wrapper" style="display:none">
+        <table class="fp-table" id="fp-table">
+            <thead>
+                <tr>
+                    <th class="fp-th-sku">SKU</th>
+                    <th class="fp-th-cu">CUs</th>
+                    <th class="fp-th-price">PAYG<br><small>/hour</small></th>
+                    <th class="fp-th-price">PAYG<br><small>/month</small></th>
+                    <th class="fp-th-price">1Y RI<br><small>/hour</small></th>
+                    <th class="fp-th-price">1Y RI<br><small>/month</small></th>
+                    <th class="fp-th-price">3Y RI<br><small>/hour</small></th>
+                    <th class="fp-th-price">3Y RI<br><small>/month</small></th>
+                    <th class="fp-th-price">1Y Savings</th>
+                    <th class="fp-th-price">3Y Savings</th>
+                </tr>
+            </thead>
+            <tbody id="fp-table-body"></tbody>
+        </table>
+    </div>
+
+    <!-- Per-CU-hour summary -->
+    <div class="fp-cuhr-summary" id="fp-cuhr-summary" style="display:none">
+        <h6 class="fp-cuhr-title">Per Capacity-Unit / Hour</h6>
+        <div class="fp-cuhr-cards" id="fp-cuhr-cards"></div>
+    </div>
+</div>

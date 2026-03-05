@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "az-scout-plugin-fabric-price"
+dynamic = ["version"]
+description = "az-scout plugin for Microsoft Fabric capacity pricing"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "az-scout",
+    "fastapi",
+    "requests>=2.31",
+    "az-scout-bdd-sku",
+]
+
+[project.urls]
+Homepage = "https://github.com/rsabile/az-scout-plugin-fabric-price"
+Repository = "https://github.com/rsabile/az-scout-plugin-fabric-price"
+Issues = "https://github.com/rsabile/az-scout-plugin-fabric-price/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+    "ruff>=0.11",
+    "mypy>=1.15",
+    "httpx>=0.28",
+]
+
+[project.entry-points."az_scout.plugins"]
+fabric_price = "az_scout_fabric_price:plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/az_scout_fabric_price"]
+
+[tool.hatch.version]
+source = "vcs"
+raw-options.version_scheme = "guess-next-dev"
+raw-options.local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/az_scout_fabric_price/_version.py"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["src/az_scout_fabric_price/_version.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["requests.*", "urllib3.*", "az_scout_bdd_sku.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
