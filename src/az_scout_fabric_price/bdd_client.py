@@ -53,6 +53,7 @@ except ImportError:  # az-scout-bdd-sku not installed
     def is_configured() -> bool:  # type: ignore[misc]
         return bool(_resolve_api_url())
 
+
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 30
