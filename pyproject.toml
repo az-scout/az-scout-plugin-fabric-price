@@ -12,7 +12,6 @@ dependencies = [
     "az-scout",
     "fastapi",
     "requests>=2.31",
-    "az-scout-bdd-sku",
 ]
 
 [project.urls]

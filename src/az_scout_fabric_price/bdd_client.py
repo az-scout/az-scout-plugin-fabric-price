@@ -7,14 +7,51 @@ bdd-api server.  The base URL is resolved from the bdd-sku plugin config.
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
 import requests
-from az_scout_bdd_sku.plugin_config import get_config, is_configured
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from az_scout_fabric_price.models import ARM_SKU_NAME
+
+try:
+    from az_scout_bdd_sku.plugin_config import get_config, is_configured
+except ImportError:  # az-scout-bdd-sku not installed
+
+    def _read_api_url_from_toml() -> str:
+        """Read api.base_url from the bdd-sku TOML config file."""
+        for p in (
+            Path.home() / ".config" / "az-scout" / "bdd-sku.toml",
+            Path("/tmp/az-scout/bdd-sku.toml"),
+        ):
+            if p.exists():
+                try:
+                    import tomllib
+                except ModuleNotFoundError:
+                    import tomli as tomllib  # type: ignore[no-redef]
+                with open(p, "rb") as f:
+                    data = tomllib.load(f)
+                return str(data.get("api", {}).get("base_url", ""))
+        return ""
+
+    def _resolve_api_url() -> str:
+        return os.environ.get("BDD_SKU_API_URL", "") or _read_api_url_from_toml()
+
+    class _FallbackConfig:
+        @property
+        def api_base_url(self) -> str:
+            return _resolve_api_url()
+
+    _fallback = _FallbackConfig()
+
+    def get_config() -> _FallbackConfig:  # type: ignore[misc]
+        return _fallback
+
+    def is_configured() -> bool:  # type: ignore[misc]
+        return bool(_resolve_api_url())
 
 logger = logging.getLogger(__name__)
 
