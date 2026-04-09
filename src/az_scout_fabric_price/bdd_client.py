@@ -23,15 +23,13 @@ except ImportError:  # az-scout-bdd-sku not installed
 
     def _read_api_url_from_toml() -> str:
         """Read api.base_url from the bdd-sku TOML config file."""
+        import tomllib
+
         for p in (
             Path.home() / ".config" / "az-scout" / "bdd-sku.toml",
             Path("/tmp/az-scout/bdd-sku.toml"),
         ):
             if p.exists():
-                try:
-                    import tomllib
-                except ModuleNotFoundError:
-                    import tomli as tomllib  # type: ignore[no-redef]
                 with open(p, "rb") as f:
                     data = tomllib.load(f)
                 return str(data.get("api", {}).get("base_url", ""))
@@ -47,10 +45,10 @@ except ImportError:  # az-scout-bdd-sku not installed
 
     _fallback = _FallbackConfig()
 
-    def get_config() -> _FallbackConfig:  # type: ignore[misc]
+    def get_config() -> _FallbackConfig:
         return _fallback
 
-    def is_configured() -> bool:  # type: ignore[misc]
+    def is_configured() -> bool:
         return bool(_resolve_api_url())
 
 
